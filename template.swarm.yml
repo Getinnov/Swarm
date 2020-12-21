@@ -1,3 +1,9 @@
+#To edit
+# {name_1} name of this instance
+# {host} public hostname
+# {entrypoint} a valid entrypoint 
+# /!\ only 1 dind per entrypoint
+# Tessted on: - traefik 2.0.2
 
 version: '3.8'
 
@@ -38,7 +44,7 @@ services:
           - node.role == manager
       labels:
         - "traefik.enable=true"
-        - "traefik.docker.network=base_proxy_02"
+        - "traefik.docker.network=base_external"
         - "traefik.http.routers.{name_1}.rule=Host(`test.{host}`)"
         - "traefik.http.routers.{name_1}.tls.certresolver=le"
         - "traefik.http.routers.{name_1}.entrypoints=websecure,web"
