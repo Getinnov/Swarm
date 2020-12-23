@@ -1,40 +1,7 @@
 #!/usr/local/bin/python3.7
 import re
 import argparse
-
-# AUTH CHECKER START
-import sys
-import pkg_resources
-
-class Auth:
-    """Auto-generated code using Auth builder"""
-
-
-    python="3.7.9"
-    module = """
-    """
-
-    def check():
-        a = False
-        actual = sys.version.split(' ')[0]
-        if Auth.python != actual:
-            print(f"Developped using Python {Auth.python} (Actual: {actual})")
-            a = True
-        for i in [i.strip() for i in Auth.module.split("\n") if i.strip() != ""]:
-            try:
-                for j in [j for j in i.split(',') if j != ""]:
-                    pkg_resources.require(j)
-            except pkg_resources.VersionConflict:
-                print(f"Version developped using {i}")
-                a = True
-            except:
-                print("Unknown error during dependencies check")
-        if a:
-            print()
-        return
-
-Auth.check()
-# AUTH CHECKER END
+from jinja2 import Template
 
 class Custom:
     """ Swarm pimp prog """
@@ -84,7 +51,7 @@ class Custom:
         parser = argparse.ArgumentParser(formatter_class=formatter)
         parser.add_argument("name", type=name_regex, help="A valid name")
         parser.add_argument("host", type=host_regex, help="A valid public hostname")
-        parser.add_argument("entrypoint", type=name_regex, help="A valid entrypoint")
+        parser.add_argument("entrypoint", type=name_regex, help="A valid traefik entrypoint")
         parser.add_argument("-t", "--template",  type=file_exist, default="template.swarm.yml", help="The template file", metavar="<file>")
         parser.add_argument("-o", "--out", type=file_can_exist, default=None, help="The output file if needed", metavar="<file>")
         args = vars(parser.parse_intermixed_args())
@@ -94,9 +61,8 @@ class Custom:
         """process"""
         res = self.args["template"]
         res = res.split("\n")
-        res = "\n".join([i for i in res if len(i.strip()) == 0 or i.strip()[0] != '#'])
-        exit()
-        res = res.format(name_1=self.args["name"],
+        res = "\n".join([i for i in res if len(i.strip()) == 0 or i.strip()[0] != '#'])[1:]
+        res = Template(res).render(name_1=self.args["name"],
             host=self.args["host"],
             entrypoint=self.args["entrypoint"]
             )
@@ -106,6 +72,59 @@ class Custom:
             f = open(self.args["out"], "w")
             f.write(res)
             f.close()
+
+# AUTH CHECKER START
+import sys
+import hashlib
+import inspect
+import pkg_resources
+
+class Auth:
+    """Auto-generated code using Auth builder"""
+
+
+    python="3.7.9"
+    module = """
+              jinja2==2.11.2
+              markupsafe==1.1.1
+             """
+    hash = {
+            "Custom": "911b0b95d69ea2c9fac2a3fc042477b8b009e43a0d7188f4aff2970ec880d0fb"
+           }
+
+
+    def check():
+        a = False
+        b = False
+        actual = sys.version.split(' ')[0]
+        if Auth.python != actual:
+            print(f"Developped using Python {Auth.python} (Actual: {actual})")
+            a = True
+        for i in [i.strip() for i in Auth.module.split("\n") if i.strip() != ""]:
+            try:
+                for j in [j for j in i.split(',') if j != ""]:
+                    pkg_resources.require(j)
+            except pkg_resources.VersionConflict:
+                print(f"Version developped using {i}")
+                a = True
+            except:
+                print("Unknown error during dependencies check")
+        for i, j in inspect.getmembers(sys.modules[__name__]):
+            if i != "Auth" and str(j) == f"<class '__main__.{i}'>":
+                source = inspect.getsource(j)
+                h = hashlib.sha256(source.encode('utf-8')).hexdigest()
+                if i not in Auth.hash or h != Auth.hash[i]:
+                    print(f"Integrity compromised on module {i}")
+                    b = True
+        if b:
+            exit()
+        if a:
+            print()
+        return
+
+
+Auth.check()
+# AUTH CHECKER END
 
 if __name__ == '__main__':
     C = Custom()

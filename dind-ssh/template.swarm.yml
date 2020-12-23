@@ -1,9 +1,9 @@
 #To edit
 # {name_1} name of this instance
 # {host} public hostname
-# {entrypoint} a valid entrypoint 
+# {entrypoint} a valid entrypoint
 # /!\ only 1 dind per entrypoint
-# Tessted on: - traefik 2.0.2
+# Tested on: - traefik 2.0.2
 
 version: '3.8'
 
@@ -13,7 +13,7 @@ networks:
     name: base_external
 
 services:
-  dind-{name_1}:
+  dind-{{name_1}}:
     image: docker:dind
     tty: true
     volumes:
@@ -45,12 +45,12 @@ services:
       labels:
         - "traefik.enable=true"
         - "traefik.docker.network=base_external"
-        - "traefik.http.routers.{name_1}.rule=Host(`test.{host}`)"
-        - "traefik.http.routers.{name_1}.tls.certresolver=le"
-        - "traefik.http.routers.{name_1}.entrypoints=websecure,web"
-        - "traefik.http.services.{name_1}.loadbalancer.passhostheader=true"
-        - "traefik.http.services.{name_1}.loadbalancer.server.port=8080"
-        - "traefik.tcp.routers.{name_1}-ssh.rule=HostSNI(`*`)"
-        - "traefik.tcp.routers.{name_1}-ssh.entrypoints={entrypoint}"
-        - "traefik.tcp.routers.{name_1}-ssh.service={name_1}-ssh-svc"
-        - "traefik.tcp.services.{name_1}-ssh-svc.loadbalancer.server.port=22"
+        - "traefik.http.routers.{{name_1}}.rule=Host(`{{host}}`)"
+        - "traefik.http.routers.{{name_1}}.tls.certresolver=le"
+        - "traefik.http.routers.{{name_1}}.entrypoints=websecure,web"
+        - "traefik.http.services.{{name_1}}.loadbalancer.passhostheader=true"
+        - "traefik.http.services.{{name_1}}.loadbalancer.server.port=8080"
+        - "traefik.tcp.routers.{{name_1}}-ssh.rule=HostSNI(`*`)"
+        - "traefik.tcp.routers.{{name_1}}-ssh.entrypoints={{entrypoint}}"
+        - "traefik.tcp.routers.{{name_1}}-ssh.service={{name_1}}-ssh-svc"
+        - "traefik.tcp.services.{{name_1}}-ssh-svc.loadbalancer.server.port=22"
