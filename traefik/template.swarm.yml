@@ -1,0 +1,141 @@
+#To edit
+# {email}
+# {traefik_host}
+# {prometheus_host}
+# {portainer_host}
+# Tested on: - traefik 2.0.2
+
+version: '3.8'
+
+networks:
+  external:
+    driver: overlay
+    driver_opts:
+      encrypted: ""
+  portainers:
+    driver: overlay
+    internal: true
+  metrics:
+    driver: overlay
+    internal: true
+
+services:
+  traefik:
+    image: traefik:2.0.2
+    command:
+      - "--entryPoints.web.address=:80"
+      - "--entryPoints.websecure.address=:443"
+      - "--log.level=INFO"
+      - "--accesslog.filepath=/path/to/access.log"
+      - "--accesslog.bufferingsize=100"
+      - "--metrics.prometheus=true"
+      - "--metrics.prometheus.buckets=0.1,0.3,1.2,5.0"
+      - "--providers.docker=true"
+      - "--providers.docker.watch=true"
+      - "--providers.docker.swarmmode=true"
+      - "--providers.docker.network=base_external"
+      - "--providers.docker.endpoint=unix:///var/run/docker.sock"
+      - "--providers.docker.swarmModeRefreshSeconds=15s"
+      - "--api"
+      - "--providers.docker.exposedbydefault=false"
+      - "--certificatesresolvers.le.acme.tlschallenge=true"
+      - "--certificatesresolvers.le.acme.email={{email}}"
+      - "--certificatesresolvers.le.acme.storage=/le/acme.json"
+    networks:
+      - external
+      - metrics
+    ports:
+      - "80:80"
+      - "443:443"
+    deploy:
+      mode: replicated
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+      placement:
+        max_replicas_per_node: 1
+        constraints:
+          - node.role == manager
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.t.rule=Host(`{{traefik_host}}`)"
+        - "traefik.http.routers.t.service=api@internal"
+        - "traefik.http.routers.t.tls.certresolver=le"
+        - "traefik.http.routers.t.entrypoints=websecure,web"
+        - "traefik.http.services.t.loadbalancer.server.port=8080"
+        - "traefik.http.services.t.loadbalancer.passhostheader=true"
+        - "traefik.http.routers.t.middlewares=authtraefik"
+        - "traefik.http.middlewares.authtraefik.basicauth.users=admin:$$2y$$05$$1OX5jZ1Kpm/iVKE8tgUhu.STmPkgi0lLxVeP5yEcRioFdV4mcgdTu"
+        - "traefik.http.routers.http-catchall.rule=hostregexp(`{host:.+}`)"
+        - "traefik.http.routers.http-catchall.entrypoints=web"
+        - "traefik.http.routers.http-catchall.middlewares=redirect-to-https"
+        - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+
+  prometheus:
+    image: prom/prometheus
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./prometheus/alert.rules:/etc/prometheus/alert.rules
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+    networks:
+      - metrics
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        max_replicas_per_node: 1
+        constraints:
+        - node.role==manager
+      restart_policy:
+        condition: on-failure
+      labels:
+       - "traefik.enable=true"
+       - "traefik.docker.network=traefik_metrics"
+       - "traefik.http.routers.prometheus.rule=Host(`{{prometheus_host}}`)"
+       - "traefik.http.routers.prometheus.tls.certresolver=le"
+       - "traefik.http.routers.prometheus.entrypoints=websecure,web"
+       - "traefik.http.routers.prometheus.service=prometheus"
+       - "traefik.http.services.prometheus.loadbalancer.passhostheader=true"
+       - "traefik.http.services.prometheus.loadbalancer.server.port=9090"
+       - "traefik.http.routers.prometheus.middlewares=authtraefik"
+       - "traefik.http.middlewares.authtraefik.basicauth.users=admin:$$2y$$05$$1OX5jZ1Kpm/iVKE8tgUhu.STmPkgi0lLxVeP5yEcRioFdV4mcgdTu"
+
+  portainer:
+    image: portainer/portainer-ce
+    command: -H tcp://tasks.agent:9001 --tlsskipverify
+    volumes:
+      - ./portainer_data:/data
+    networks:
+      - external
+      - portainers
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints: [node.role == manager]
+      labels:
+        - "traefik.enable=true"
+        - "traefik.docker.network=traefik_external"
+        - "traefik.http.routers.portainer.rule=Host(`{{portainer_host}}`)"
+        - "traefik.http.routers.portainer.tls.certresolver=le"
+        - "traefik.http.routers.portainer.entrypoints=websecure,web"
+        - "traefik.http.services.portainer.loadbalancer.passhostheader=true"
+        - "traefik.http.services.portainer.loadbalancer.server.port=9000"
+
+  agent:
+    image: portainer/agent
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /var/lib/docker/volumes:/var/lib/docker/volumes
+    networks:
+      - portainers
+    deploy:
+      mode: global
+      placement:
+        constraints: [node.platform.os == linux]
