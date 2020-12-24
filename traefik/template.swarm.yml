@@ -21,7 +21,7 @@ networks:
 
 services:
   traefik:
-    image: traefik:2.0.2
+    image: traefik:2.0.4
     command:
       - "--entryPoints.web.address=:80"
       - "--entryPoints.websecure.address=:443"
