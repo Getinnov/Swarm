@@ -1,7 +1,7 @@
 #!/usr/local/bin/python3.7
 """
 The main goal of this project is to create a handy, automated way to
-generate code that will be able to check dependencies.
+generate code that will be able to check dependencies and authenticity for a given script
 """
 import argparse
 import sys
