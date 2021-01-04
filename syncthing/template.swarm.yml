@@ -1,9 +1,15 @@
-version: "2.1"
+version: "3.8"
+
+networks:
+  sync:
+    driver: overlay
+    driver_opts:
+      encrypted: ""
+    internal: true
+
 services:
   syncthing:
     image: ghcr.io/linuxserver/syncthing
-    container_name: syncthing
-    hostname: syncthing
     tty: true
     entrypoint: ash -c  '
       apk update ;
@@ -39,10 +45,8 @@ services:
       - PGID=1000
       - TZ=Europe/London
     volumes:
-      - ./data:/config/Sync
-    ports:
-      - 8384:8384
-    expose:
-      - 22000
-      - 21027/udp
-    restart: unless-stopped
+      - ../sync_data:/config/Sync
+    networks:
+      - sync
+    deploy:
+      mode: global
